@@ -13,8 +13,8 @@ erda = cv2.imread("erda.png", cv2.IMREAD_COLOR)
 erda_gray = cv2.cvtColor(erda, cv2.COLOR_BGR2GRAY)
 w, h = erda_gray.shape[::-1]
 
-threshold = 0.95
-was_found = False   # 이전 프레임에서 탐지 여부
+threshold = 0.963
+was_found = False
 
 cv2.namedWindow("Screen Capture", cv2.WINDOW_NORMAL)
 cv2.resizeWindow("Screen Capture", 800, 600)
@@ -38,6 +38,8 @@ while True:
     if found and not was_found:
         print(">>> 프리드 발견!")
         winsound.Beep(750, 300)
+
+    # was_found = found
 
     res = cv2.matchTemplate(img_gray, erda_gray, cv2.TM_CCOEFF_NORMED)
     loc = np.where(res >= threshold)

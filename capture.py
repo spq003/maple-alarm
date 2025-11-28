@@ -18,9 +18,9 @@ class CaptureThread(QThread):
         while self.running:
             try:
                 capture = self.maple_screen_capture()
+                self.frame_ready.emit(capture)
             except: # 캡쳐 중 오류 발생시 프레임 스킵
                 continue
-            self.frame_ready.emit(capture)
             time.sleep(0.02)
 
     def stop(self):

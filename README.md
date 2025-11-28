@@ -1,7 +1,6 @@
 # maple-alram
 ### 디렉토리 구조
 ```
-/logiCourt
 ├── core
 │   ├── analysis.py              # 템플릿 매칭 스레드
 │   ├── capture.py               # 화면 캡쳐 스레드

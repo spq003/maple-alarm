@@ -7,9 +7,8 @@ from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtWidgets import QLabel, QDialog, QRadioButton, QPushButton, QApplication
 from PyQt5 import uic
 
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from capture import CaptureThread
-from analysis import TemplateThread
+from core.capture import CaptureThread
+from core.analysis import TemplateThread
 
 class MainWindow(QDialog):
     default_path = os.path.join(os.path.dirname(__file__), '..')
@@ -98,9 +97,3 @@ class MainWindow(QDialog):
             self.templateThread.set_status("janus")
         elif self.radioButton4.isChecked():
             self.templateThread.set_status("freud")
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    uiInstance = MainWindow()
-    uiInstance.show()
-    sys.exit(app.exec_())

@@ -4,7 +4,7 @@ import time
 import numpy as np
 from PyQt5.QtCore import QThread, pyqtSignal
 
-import DXGI_screen_capture as eye
+import core.DXGI_screen_capture as eye
 
 class CaptureThread(QThread):
     frame_ready = pyqtSignal(np.ndarray)

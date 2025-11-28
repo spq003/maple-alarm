@@ -3,6 +3,7 @@ import os
 import cv2
 import time
 import copy
+import winsound
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtWidgets import QLabel, QDialog, QRadioButton, QPushButton, QApplication
 from PyQt5 import uic
@@ -19,8 +20,8 @@ class MainWindow(QDialog):
         "freud": cv2.TM_CCOEFF_NORMED,
     }
     threshold = {
-        "tail": 0.99,
-        "erda": 0.95,
+        "tail": 0.998,
+        "erda": 0.96,
         "janus": 0.95,
         "freud": 0.95,
     }
@@ -45,6 +46,7 @@ class MainWindow(QDialog):
         self.applyButton.clicked.connect(self._apply_click)
         self.detected_box = None
         self.detected_time = time.time()
+        self.last_beep_time = time.time()
         self.BOX_HOLD_TIME_MS = 300
 
         self.captureThread = CaptureThread()
@@ -60,7 +62,7 @@ class MainWindow(QDialog):
         status = result["status"]
         x, y, w, h = result["box"]
         conf = result["confidence"]
-        #print(f'>> {status}: {conf}')
+        # print(f'>> {status}: {conf}')
         self.detected_box = (x, y, w, h)
         self.detected_time = time.time()
 
@@ -78,22 +80,31 @@ class MainWindow(QDialog):
 
         if (time.time() - self.detected_time) * 1000 < self.BOX_HOLD_TIME_MS:
             x, y, w, h = box
-            cv2.rectangle(my_frame, (x, y), (x + w, y + h), (0, 255, 0), 5)
+            cv2.rectangle(my_frame, (x, y), (x + w, y + h), (0, 255, 255), 20)
+            self.beep()
         else:
             self.detected_box = None
         return my_frame
+    
+    def beep(self):
+        if (time.time() - self.last_beep_time) * 1000 > 4000:
+            winsound.Beep(700, 300)
+            self.last_beep_time = time.time()
 
     def close_event(self, event):
         self.captureThread.stop()
         self.templateThread.stop()
         event.accept()
 
-    def _apply_click(self):
+    def check_radio_button(self):
         if self.radioButton1.isChecked():
-            self.templateThread.set_status("tail")
+            return "tail"
         elif self.radioButton2.isChecked():
-            self.templateThread.set_status("erda")
+            return "erda"
         elif self.radioButton3.isChecked():
-            self.templateThread.set_status("janus")
+            return "janus"
         elif self.radioButton4.isChecked():
-            self.templateThread.set_status("freud")
+            return "freud"
+
+    def _apply_click(self):
+        self.templateThread.set_status(self.check_radio_button())

@@ -16,7 +16,10 @@ class CaptureThread(QThread):
 
     def run(self):
         while self.running:
-            capture = self.maple_screen_capture()
+            try:
+                capture = self.maple_screen_capture()
+            except: # 캡쳐 중 오류 발생시 프레임 스킵
+                continue
             self.frame_ready.emit(capture)
             time.sleep(0.02)
 
@@ -36,6 +39,8 @@ class CaptureThread(QThread):
         try:
             hwnd = win32gui.FindWindow(None, "MapleStory") # 창 핸들 가져오기
             rect = win32gui.GetWindowRect(hwnd) # 창 좌표 가져오기
+            if max(rect) < 0: # 창 좌표를 찾을 수 없는경우 전체화면 반환
+                return img
         except:
             return img
 

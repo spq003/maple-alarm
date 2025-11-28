@@ -5,16 +5,9 @@ from PyQt5.QtCore import QThread, pyqtSignal
 
 class TemplateThread(QThread):
     result_ready = pyqtSignal(dict)  
-    # ex) {"status": "attack", "box": (x,y,w,h), "confidence": 0.94}
+    # ex) {"status": "tail", "box": (x,y,w,h), "confidence": 0.94}
 
     def __init__(self, templates: dict):
-        """
-        templates = {
-            "erda": cv2.imread("img/erda.png", 0),
-            "freud": cv2.imread("img/freud.png", 0),
-            "tail": cv2.imread("img/tail.png", 0)
-        }
-        """
         super().__init__()
         self.templates = templates
         self.current_status = None
@@ -42,7 +35,7 @@ class TemplateThread(QThread):
             gray_frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
             res = cv2.matchTemplate(gray_frame, template, cv2.TM_CCOEFF_NORMED)
             min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-            if max_val < 0.9: continue
+            if max_val < 0.8: continue
             th, tw = template.shape[:2]
             x, y = max_loc
 
@@ -53,3 +46,7 @@ class TemplateThread(QThread):
             })
 
             self.msleep(10)
+
+    def stop(self):
+        self.running = False
+        self.wait()

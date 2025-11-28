@@ -11,14 +11,13 @@ from capture import CaptureThread
 from analysis import TemplateThread
 
 class MainWindow(QDialog):
-    """
-    QRadioButton radioButton1 : 악몽선경
-    QRadioButton radioButton2 : 솔에르다
-    QRadioButton radioButton3 : 솔야누스
-    QRadioButton radioButton4 : 프리드
-    QPushButton applyButton
-    QLabel imageLabel
-    """
+    default_path = os.path.join(os.path.dirname(__file__), '..')
+    templates = {
+        "tail": cv2.imread(default_path + "/img/tail.png", 0),
+        "erda": cv2.imread(default_path + "/img/erda.png", 0),
+        "erda2": cv2.imread(default_path + "/img/janus.png", 0),
+        "freud": cv2.imread(default_path + "/img/freud.png", 0)
+    }
     
     def __init__(self):
         super().__init__()
@@ -33,21 +32,14 @@ class MainWindow(QDialog):
         self.applyButton = self.findChild(QPushButton, "applyButton")
         self.applyButton.clicked.connect(self._apply_click)
         self.detected_box = None
-        self.detected_time = 0
-        self.BOX_HOLD_TIME_MS = 300
+        self.detected_time = time.time()
+        self.BOX_HOLD_TIME_MS = 1000
 
         self.captureThread = CaptureThread()
         self.captureThread.frame_ready.connect(self.update_frame)
         self.captureThread.start()
 
-        default_path = os.path.join(os.path.dirname(__file__), '..')
-        templates = {
-            "tail": cv2.imread(default_path + "/img/tail.png", 0),
-            "erda": cv2.imread(default_path + "/img/erda.png", 0),
-            "erda2": cv2.imread(default_path + "/img/erda.png", 0),
-            "freud": cv2.imread(default_path + "/img/freud.png", 0)
-        }
-        self.templateThread = TemplateThread(templates)
+        self.templateThread = TemplateThread(self.templates)
         self.templateThread.result_ready.connect(self.handle_template_result)
         self.captureThread.frame_ready.connect(self.templateThread.update_frame)
         self.templateThread.start()
@@ -56,9 +48,34 @@ class MainWindow(QDialog):
         status = result["status"]
         x, y, w, h = result["box"]
         conf = result["confidence"]
-        #print(f"[{status}] matched at {x,y} conf={conf}")
+        if conf < 0.9:
+            return
+        print(f'>> {status}: {conf}')
         self.detected_box = (x, y, w, h)
         self.detected_time = time.time()
+
+    def update_frame(self, frame):
+        frame = self.draw_box(frame)
+
+        h, w, c = frame.shape
+        qImg = QImage(frame.data.tobytes(), w, h, c*w, QImage.Format_BGR888)
+        self.imageLabel.setPixmap(QPixmap.fromImage(qImg).scaled(641, 361))
+
+    def draw_box(self, frame):
+        box = self.detected_box # 지역변수로 복사해서 체크
+        if box is None: return frame
+
+        if (time.time() - self.detected_time) * 1000 < self.BOX_HOLD_TIME_MS:
+            x, y, w, h = box
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 255), 15)
+        else:
+            self.detected_box = None
+        return frame
+
+    def close_event(self, event):
+        self.captureThread.stop()
+        self.templateThread.stop()
+        event.accept()
 
     def _apply_click(self):
         if self.radioButton1.isChecked():
@@ -69,23 +86,6 @@ class MainWindow(QDialog):
             self.templateThread.set_status("erda2")
         elif self.radioButton4.isChecked():
             self.templateThread.set_status("freud")
-
-    def update_frame(self, frame):
-        box_draw_frame = frame
-        if self.detected_box is not None:
-            if ((time.time() - self.detected_time) * 1000) < self.BOX_HOLD_TIME_MS:
-                x, y, w, h = self.detected_box
-                cv2.rectangle(box_draw_frame, (x, y), (x + w, y + h), (0, 0, 255), 10)
-            else:
-                self.detected_box = None
-
-        h, w, c = frame.shape
-        qImg = QImage(frame.data.tobytes(), w, h, c*w, QImage.Format_BGR888)
-        self.imageLabel.setPixmap(QPixmap.fromImage(qImg).scaled(641, 361))
-
-    def close_event(self, event):
-        self.captureThread.stop()
-        event.accept()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

@@ -20,7 +20,7 @@ class MainWindow(QDialog):
         "freud": cv2.TM_CCOEFF_NORMED,
     }
     threshold = {
-        "tail": 0.98,
+        "tail": 0.99,
         "erda": 0.95,
         "janus": 0.95,
         "freud": 0.95,
@@ -61,9 +61,7 @@ class MainWindow(QDialog):
         status = result["status"]
         x, y, w, h = result["box"]
         conf = result["confidence"]
-        # if conf < 0.9:
-        #     return
-        print(f'>> {status}: {conf}')
+        #print(f'>> {status}: {conf}')
         self.detected_box = (x, y, w, h)
         self.detected_time = time.time()
 

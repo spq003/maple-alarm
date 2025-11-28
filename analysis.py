@@ -4,12 +4,13 @@ import numpy as np
 from PyQt5.QtCore import QThread, pyqtSignal
 
 class TemplateThread(QThread):
-    result_ready = pyqtSignal(dict)  
-    # ex) {"status": "tail", "box": (x,y,w,h), "confidence": 0.94}
+    result_ready = pyqtSignal(dict) # {"status": "tail", "box": (x,y,w,h), "confidence": 0.94}
 
-    def __init__(self, templates: dict):
+    def __init__(self, templates: dict, thresholds: dict, methods: dict):
         super().__init__()
         self.templates = templates
+        self.thresholds = thresholds
+        self.methods = methods
         self.current_status = None
         self.running = True
         self.frame = None
@@ -26,26 +27,23 @@ class TemplateThread(QThread):
             if (self.frame is None) or (self.current_status is None):
                 self.msleep(10)
                 continue
-            
+            gray_frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
             template = self.templates[self.current_status]
-            if template is None:
-                self.msleep(10)
+
+            res = cv2.matchTemplate(gray_frame, template, self.methods[self.current_status]) # method: cv2.TM_~~~
+            _, max_val, _, max_loc = cv2.minMaxLoc(res)
+            th, tw = template.shape[:2]
+            res_vals = (max_val, max_loc[0], max_loc[1], tw, th) # {conf, x, y, w, h}
+            
+            if res_vals[0] < self.thresholds[self.current_status]:
                 continue
 
-            gray_frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
-            res = cv2.matchTemplate(gray_frame, template, cv2.TM_CCOEFF_NORMED)
-            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-            if max_val < 0.8: continue
-            th, tw = template.shape[:2]
-            x, y = max_loc
-
             self.result_ready.emit({
-                "status": self.current_status,
-                "box": (x, y, tw, th),
-                "confidence": float(max_val)
+                    "status": self.current_status,
+                    "box": (res_vals[1], res_vals[2], res_vals[3], res_vals[4]),
+                    "confidence": float(res_vals[0])
             })
-
-            self.msleep(10)
+            self.msleep(20)
 
     def stop(self):
         self.running = False
